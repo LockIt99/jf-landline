@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/background"
+    android:padding="16dp">
+
+    <!-- Header Status Card -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@color/card_bg"
+        android:padding="16dp"
+        android:layout_marginBottom="12dp">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <TextView
+                android:id="@+id/tv_phone_number"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="3331628760"
+                android:textColor="@color/text_primary"
+                android:textSize="22sp"
+                android:textStyle="bold" />
+
+            <Button
+                android:id="@+id/btn_refresh"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:layout_alignParentRight="true"
+                android:text="Refresh"
+                android:textSize="12sp"
+                android:background="@color/dialpad_button"
+                android:textColor="@color/text_primary" />
+        </RelativeLayout>
+
+        <TextView
+            android:id="@+id/tv_router_host"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Router: 192.168.29.1"
+            android:textColor="@color/text_secondary"
+            android:textSize="14sp"
+            android:layout_marginTop="4dp" />
+
+        <TextView
+            android:id="@+id/tv_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Status: Ready"
+            android:textColor="@color/call_green"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginTop="4dp" />
+
+        <!-- Remote Companion Gateway Box -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#26FFFFFF"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="8dp" />
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_alignParentLeft="true"
+                android:layout_toLeftOf="@+id/btn_new_pin">
+
+                <TextView
+                    android:id="@+id/tv_gateway_info"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Companion Gateway: 192.168.29.X:8088"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/tv_gateway_pin"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Companion PIN: ----"
+                    android:textColor="@color/call_green"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginTop="2dp" />
+            </LinearLayout>
+
+            <Button
+                android:id="@+id/btn_new_pin"
+                android:layout_width="wrap_content"
+                android:layout_height="32dp"
+                android:layout_alignParentRight="true"
+                android:layout_centerVertical="true"
+                android:text="New PIN"
+                android:textSize="11sp"
+                android:background="@color/dialpad_button"
+                android:textColor="@color/text_primary" />
+        </RelativeLayout>
+    </LinearLayout>
+
+    <!-- Number Display & Backspace Bar -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="8dp">
+
+        <EditText
+            android:id="@+id/et_dial_number"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="Dial a number"
+            android:textColorHint="@color/text_secondary"
+            android:textColor="@color/text_primary"
+            android:textSize="26sp"
+            android:background="@android:color/transparent"
+            android:inputType="phone"
+            android:maxLines="1"
+            android:textAlignment="center" />
+
+        <ImageButton
+            android:id="@+id/btn_backspace"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="@android:color/transparent"
+            android:src="@android:drawable/ic_input_delete"
+            android:contentDescription="Backspace" />
+    </LinearLayout>
+
+    <!-- Dialpad Table (KitKat-Compatible Nested LinearLayouts) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <!-- Row 1 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal">
+            <Button android:id="@+id/btn_1" android:text="1" style="@style/DialpadRowBtn" />
+            <Button android:id="@+id/btn_2" android:text="2" style="@style/DialpadRowBtn" />
+            <Button android:id="@+id/btn_3" android:text="3" style="@style/DialpadRowBtn" />
+        </LinearLayout>
+
+        <!-- Row 2 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal">
+            <Button android:id="@+id/btn_4" android:text="4" style="@style/DialpadRowBtn" />
+            <Button android:id="@+id/btn_5" android:text="5" style="@style/DialpadRowBtn" />
+            <Button android:id="@+id/btn_6" android:text="6" style="@style/DialpadRowBtn" />
+        </LinearLayout>
+
+        <!-- Row 3 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal">
+            <Button android:id="@+id/btn_7" android:text="7" style="@style/DialpadRowBtn" />
+            <Button android:id="@+id/btn_8" android:text="8" style="@style/DialpadRowBtn" />
+            <Button android:id="@+id/btn_9" android:text="9" style="@style/DialpadRowBtn" />
+        </LinearLayout>
+
+        <!-- Row 4 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal">
+            <Button android:id="@+id/btn_star" android:text="*" style="@style/DialpadRowBtn" />
+            <Button android:id="@+id/btn_0" android:text="0" style="@style/DialpadRowBtn" />
+            <Button android:id="@+id/btn_hash" android:text="#" style="@style/DialpadRowBtn" />
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- Call Button -->
+    <Button
+        android:id="@+id/btn_call"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:text="Call via Jio Landline"
+        android:textColor="@color/text_primary"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:background="@color/call_green"
+        android:layout_marginTop="8dp" />
+
+</LinearLayout>

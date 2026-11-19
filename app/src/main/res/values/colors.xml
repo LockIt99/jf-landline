@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="primary">#0F3E6D</color>
+    <color name="primary_dark">#092644</color>
+    <color name="accent">#00A859</color>
+    <color name="call_green">#2ECC71</color>
+    <color name="call_red">#E74C3C</color>
+    <color name="background">#111625</color>
+    <color name="card_bg">#1D263B</color>
+    <color name="text_primary">#FFFFFF</color>
+    <color name="text_secondary">#9EADC8</color>
+    <color name="dialpad_button">#28354E</color>
+</resources>
+

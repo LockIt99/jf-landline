@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/background"
+    android:paddingLeft="24dp"
+    android:paddingRight="24dp"
+    android:paddingTop="28dp"
+    android:paddingBottom="24dp"
+    android:gravity="center_horizontal">
+
+    <!-- Top: Caller Number -->
+    <TextView
+        android:id="@+id/tv_call_number"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="7044756295"
+        android:textColor="@color/text_primary"
+        android:textSize="28sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:ellipsize="end"
+        android:singleLine="true" />
+
+    <!-- Call Status: "Calling...", "Ringing...", "Connected" -->
+    <TextView
+        android:id="@+id/tv_call_status"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Calling..."
+        android:textColor="@color/text_secondary"
+        android:textSize="16sp"
+        android:layout_marginTop="4dp" />
+
+    <!-- Call Chronometer: "00:15" -->
+    <Chronometer
+        android:id="@+id/call_chronometer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@color/call_green"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:layout_marginTop="4dp"
+        android:visibility="gone" />
+
+    <!-- Middle Section: Avatar (when dialpad hidden) -->
+    <FrameLayout
+        android:id="@+id/avatar_container"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_gravity="center">
+
+        <ImageView
+            android:layout_width="84dp"
+            android:layout_height="84dp"
+            android:layout_gravity="center"
+            android:src="@drawable/ic_in_call_avatar"
+            android:background="@drawable/bg_avatar_circle"
+            android:padding="20dp"
+            android:contentDescription="Avatar" />
+    </FrameLayout>
+
+    <!-- Middle Section: DTMF Dialpad (when dialpad toggled visible) -->
+    <LinearLayout
+        android:id="@+id/dtmf_grid"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:visibility="gone"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal">
+            <Button android:id="@+id/btn_dtmf_1" android:text="1" style="@style/DialpadRowBtn" />
+            <Button android:id="@+id/btn_dtmf_2" android:text="2" style="@style/DialpadRowBtn" />
+            <Button android:id="@+id/btn_dtmf_3" android:text="3" style="@style/DialpadRowBtn" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal">
+            <Button android:id="@+id/btn_dtmf_4" android:text="4" style="@style/DialpadRowBtn" />
+            <Button android:id="@+id/btn_dtmf_5" android:text="5" style="@style/DialpadRowBtn" />
+            <Button android:id="@+id/btn_dtmf_6" android:text="6" style="@style/DialpadRowBtn" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal">
+            <Button android:id="@+id/btn_dtmf_7" android:text="7" style="@style/DialpadRowBtn" />
+            <Button android:id="@+id/btn_dtmf_8" android:text="8" style="@style/DialpadRowBtn" />
+            <Button android:id="@+id/btn_dtmf_9" android:text="9" style="@style/DialpadRowBtn" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal">
+            <Button android:id="@+id/btn_dtmf_star" android:text="*" style="@style/DialpadRowBtn" />
+            <Button android:id="@+id/btn_dtmf_0" android:text="0" style="@style/DialpadRowBtn" />
+            <Button android:id="@+id/btn_dtmf_hash" android:text="#" style="@style/DialpadRowBtn" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Bottom Controls: Mute, Speaker, Dialpad spaced equally -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:layout_marginBottom="24dp">
+
+        <!-- Mute Column -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center">
+
+            <ImageButton
+                android:id="@+id/btn_mute"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:background="@drawable/bg_action_circle"
+                android:src="@drawable/ic_in_call_mute"
+                android:padding="14dp"
+                android:scaleType="fitCenter"
+                android:contentDescription="Mute" />
+
+            <TextView
+                android:id="@+id/tv_mute_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Mute"
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp"
+                android:layout_marginTop="6dp" />
+        </LinearLayout>
+
+        <!-- Speaker Column -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center">
+
+            <ImageButton
+                android:id="@+id/btn_speaker"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:background="@drawable/bg_action_circle"
+                android:src="@drawable/ic_in_call_speaker"
+                android:padding="14dp"
+                android:scaleType="fitCenter"
+                android:contentDescription="Speaker" />
+
+            <TextView
+                android:id="@+id/tv_speaker_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Speaker"
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp"
+                android:layout_marginTop="6dp" />
+        </LinearLayout>
+
+        <!-- Dialpad Column -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center">
+
+            <ImageButton
+                android:id="@+id/btn_keypad"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:background="@drawable/bg_action_circle"
+                android:src="@drawable/ic_in_call_dialpad"
+                android:padding="14dp"
+                android:scaleType="fitCenter"
+                android:contentDescription="Keypad" />
+
+            <TextView
+                android:id="@+id/tv_keypad_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Dialpad"
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp"
+                android:layout_marginTop="6dp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Bottom: Large End Call Button (Stock KitKat Style) -->
+    <ImageButton
+        android:id="@+id/btn_end_call"
+        android:layout_width="72dp"
+        android:layout_height="72dp"
+        android:layout_gravity="center_horizontal"
+        android:background="@drawable/bg_end_call_circle"
+        android:src="@drawable/ic_in_call_end"
+        android:padding="18dp"
+        android:scaleType="fitCenter"
+        android:contentDescription="End Call"
+        android:layout_marginBottom="8dp" />
+
+</LinearLayout>
