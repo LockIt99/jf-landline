@@ -1,14 +1,38 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Brand / Primary -->
     <color name="primary">#0F3E6D</color>
     <color name="primary_dark">#092644</color>
-    <color name="accent">#00A859</color>
-    <color name="call_green">#2ECC71</color>
-    <color name="call_red">#E74C3C</color>
-    <color name="background">#111625</color>
-    <color name="card_bg">#1D263B</color>
-    <color name="text_primary">#FFFFFF</color>
-    <color name="text_secondary">#9EADC8</color>
-    <color name="dialpad_button">#28354E</color>
-</resources>
+    <color name="accent">#10B981</color>
+    <color name="accent_blue">#2563EB</color>
+    <color name="accent_blue_light">#3B82F6</color>
+    <color name="accent_blue_pressed">#1D4ED8</color>
 
+    <!-- Surfaces & Backgrounds -->
+    <color name="background">#0B111E</color>
+    <color name="card_bg">#151F32</color>
+    <color name="card_inner_bg">#0E1726</color>
+    <color name="card_stroke">#22314C</color>
+    <color name="divider">#1A253A</color>
+
+    <!-- Status Accents -->
+    <color name="call_green">#10B981</color>
+    <color name="call_green_bg">#132B23</color>
+    <color name="call_green_stroke">#10B981</color>
+    <color name="status_amber">#F59E0B</color>
+    <color name="status_amber_bg">#2E2211</color>
+    <color name="status_amber_stroke">#D97706</color>
+    <color name="call_red">#EF4444</color>
+    <color name="call_red_bg">#2D1619</color>
+    <color name="call_red_stroke">#DC2626</color>
+
+    <!-- Typography -->
+    <color name="text_primary">#FFFFFF</color>
+    <color name="text_secondary">#94A3B8</color>
+    <color name="text_muted">#64748B</color>
+
+    <!-- Controls -->
+    <color name="dialpad_button">#28354E</color>
+    <color name="btn_secondary">#1E2C44</color>
+    <color name="btn_secondary_pressed">#283A58</color>
+</resources>

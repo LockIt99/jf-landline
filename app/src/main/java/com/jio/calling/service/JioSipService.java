@@ -29,9 +29,11 @@ import com.jio.calling.provisioning.JioRouterDiscovery;
 import com.jio.calling.sip.JioCallListener;
 import com.jio.calling.sip.JioRegistrationListener;
 import com.jio.calling.sip.JioSipManager;
+import com.jio.calling.telecom.JioTelecomManager;
 import com.jio.calling.ui.InCallActivity;
 import com.jio.calling.ui.IncomingCallActivity;
 import com.jio.calling.ui.MainActivity;
+import com.jio.calling.util.AppPreferences;
 
 /**
  * Foreground Service maintaining 24/7 background presence for the Jio landline.
@@ -468,6 +470,11 @@ public class JioSipService extends Service implements JioRegistrationListener, J
     public void onRegistered() {
         String number = sipManager.getCurrentAccount() != null ? sipManager.getCurrentAccount().getMsisdn() : "";
         updateNotification("Connected: " + number);
+
+        // Auto-register Telecom PhoneAccount if enabled on Android 6.0+
+        if (JioTelecomManager.isSupported() && AppPreferences.isTelecomEnabled(this)) {
+            JioTelecomManager.registerPhoneAccount(this);
+        }
     }
 
     @Override
@@ -492,10 +499,20 @@ public class JioSipService extends Service implements JioRegistrationListener, J
     // --- JioCallListener ---
     @Override
     public void onCallIncoming(String remoteNumber, String remoteDisplayName) {
-        Log.i(TAG, "Incoming call received! Launching IncomingCallActivity");
+        Log.i(TAG, "Incoming call received: " + remoteNumber + " (" + remoteDisplayName + ")");
 
         acquireIncomingWakeLock();
 
+        // If Telecom integration and System In-Call UI is enabled on Android 6.0+, route through Telecom
+        if (JioTelecomManager.isSupported() && AppPreferences.isTelecomEnabled(this) && AppPreferences.isUseTelecomUiEnabled(this)) {
+            boolean handled = JioTelecomManager.addNewIncomingCall(this, remoteNumber, remoteDisplayName);
+            if (handled) {
+                Log.i(TAG, "Incoming call routed via Android Telecom system UI");
+                return;
+            }
+        }
+
+        // Default / Legacy / KitKat UI: launch IncomingCallActivity overlay
         Intent incoming = new Intent(this, IncomingCallActivity.class);
         incoming.putExtra("REMOTE_NUMBER", remoteNumber);
         incoming.putExtra("REMOTE_NAME", remoteDisplayName);
