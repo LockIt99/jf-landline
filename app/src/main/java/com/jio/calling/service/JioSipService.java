@@ -386,7 +386,11 @@ public class JioSipService extends Service implements JioRegistrationListener, J
             }
         };
 
-        registerReceiver(keepAliveReceiver, new IntentFilter(ACTION_KEEPALIVE_ALARM));
+        if (Build.VERSION.SDK_INT >= 33) {
+            registerReceiver(keepAliveReceiver, new IntentFilter(ACTION_KEEPALIVE_ALARM), Context.RECEIVER_NOT_EXPORTED);
+        } else {
+            registerReceiver(keepAliveReceiver, new IntentFilter(ACTION_KEEPALIVE_ALARM));
+        }
         scheduleNextKeepAliveAlarm();
     }
 
@@ -493,7 +497,11 @@ public class JioSipService extends Service implements JioRegistrationListener, J
             }
         };
 
-        registerReceiver(networkReceiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
+        if (Build.VERSION.SDK_INT >= 33) {
+            registerReceiver(networkReceiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION), Context.RECEIVER_EXPORTED);
+        } else {
+            registerReceiver(networkReceiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
+        }
     }
 
     // --- JioRegistrationListener ---

@@ -124,11 +124,13 @@ public class MainActivity extends AppCompatActivity implements JioRegistrationLi
             permissions.add(Manifest.permission.RECORD_AUDIO);
             permissions.add(Manifest.permission.READ_PHONE_STATE);
             permissions.add(Manifest.permission.CALL_PHONE);
-            permissions.add(Manifest.permission.READ_CALL_LOG);
             permissions.add(Manifest.permission.WRITE_CALL_LOG);
 
             if (Build.VERSION.SDK_INT >= 33) {
                 permissions.add("android.permission.POST_NOTIFICATIONS");
+            }
+            if (Build.VERSION.SDK_INT >= 30) {
+                permissions.add("android.permission.READ_PHONE_NUMBERS");
             }
             if (Build.VERSION.SDK_INT <= 28) {
                 permissions.add(Manifest.permission.PROCESS_OUTGOING_CALLS);

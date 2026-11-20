@@ -5,7 +5,6 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
-    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
 
     <!-- Audio permissions for VoIP calls -->
@@ -16,17 +15,19 @@
     <!-- Power & Keepalive permissions for 24/7 appliance reliability -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-    <uses-permission android:name="android.permission.DISABLE_KEYGUARD" />
 
     <!-- Telephony & Dialer permissions for outgoing call hook & call log sync -->
-    <uses-permission android:name="android.permission.PROCESS_OUTGOING_CALLS" />
+    <uses-permission
+        android:name="android.permission.PROCESS_OUTGOING_CALLS"
+        android:maxSdkVersion="28" />
     <uses-permission android:name="android.permission.CALL_PHONE" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
-    <uses-permission android:name="android.permission.READ_CALL_LOG" />
     <uses-permission android:name="android.permission.WRITE_CALL_LOG" />
+    <uses-permission android:name="android.permission.READ_PHONE_NUMBERS" />
 
     <!-- Foreground service permissions (Required for Android 9+ / API 28+) -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_PHONE_CALL" />
     <!-- Notification permission (Required for Android 13+ / API 33+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
@@ -35,7 +36,7 @@
 
     <application
         android:allowBackup="true"
-        android:icon="@android:drawable/sym_action_call"
+        android:icon="@drawable/ic_launcher"
         android:label="Jio Landline"
         android:theme="@style/Theme.JioCalling">
 
@@ -74,15 +75,16 @@
         <!-- Foreground SIP background service -->
         <service
             android:name=".service.JioSipService"
+            android:foregroundServiceType="phoneCall"
             android:enabled="true"
-            android:exported="true" />
+            android:exported="false" />
 
-        <!-- Stock dialer interception receiver -->
+        <!-- Stock dialer interception receiver (legacy Android < 6.0) -->
         <receiver
             android:name=".receiver.OutgoingCallReceiver"
-            android:enabled="true"
+            android:enabled="@bool/is_legacy_interception_supported"
             android:exported="true">
-            <intent-filter android:priority="1000">
+            <intent-filter>
                 <action android:name="android.intent.action.NEW_OUTGOING_CALL" />
             </intent-filter>
         </receiver>
