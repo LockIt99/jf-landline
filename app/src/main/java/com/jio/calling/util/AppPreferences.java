@@ -6,9 +6,9 @@ import android.os.Build;
 
 /**
  * Manages user configurations and toggles for Jio Landline:
- * - Stock dialer call interception
- * - Android Telecom calling account registration
- * - In-call UI mode (System dialer vs App overlay)
+ * - Stock dialer call interception (enabled by default on < Android 6, disabled by default on Android 6+)
+ * - Android Telecom calling account registration (Android 6.0+)
+ * - In-call UI mode (System in-call UI vs App overlay)
  * - Emergency number safety bypass
  */
 public class AppPreferences {
@@ -25,10 +25,13 @@ public class AppPreferences {
 
     /**
      * Whether outgoing calls dialed from the stock phone dialer should be intercepted.
-     * Default: true
+     * Default:
+     * - Android < 6.0: true (Telecom Calling Accounts do not exist, so interception is the primary routing method)
+     * - Android >= 6.0: false (Android Telecom Manager / Calling Account handles routing natively)
      */
     public static boolean isCallInterceptionEnabled(Context context) {
-        return getPrefs(context).getBoolean(KEY_INTERCEPT_CALLS, true);
+        boolean defaultIntercept = Build.VERSION.SDK_INT < Build.VERSION_CODES.M;
+        return getPrefs(context).getBoolean(KEY_INTERCEPT_CALLS, defaultIntercept);
     }
 
     public static void setCallInterceptionEnabled(Context context, boolean enabled) {
@@ -51,14 +54,14 @@ public class AppPreferences {
     }
 
     /**
-     * Whether to route incoming calls to Android Telecom system in-call UI instead of app's custom UI.
-     * Default: false (custom high-contrast UI)
+     * Whether to route calls through Android Telecom system in-call UI instead of app's custom UI.
+     * Default: true on API 23+, false on older versions.
      */
     public static boolean isUseTelecomUiEnabled(Context context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
             return false;
         }
-        return getPrefs(context).getBoolean(KEY_USE_TELECOM_UI, false);
+        return getPrefs(context).getBoolean(KEY_USE_TELECOM_UI, true);
     }
 
     public static void setUseTelecomUiEnabled(Context context, boolean enabled) {

@@ -311,6 +311,7 @@
 
         <!-- Android Telecom & Calling Accounts Card -->
         <LinearLayout
+            android:id="@+id/card_telecom_section"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
@@ -432,34 +433,6 @@
                     android:ellipsize="end"
                     android:layout_marginTop="8dp" />
 
-            </LinearLayout>
-
-            <!-- KitKat / Pre-API 23 Informational Banner -->
-            <LinearLayout
-                android:id="@+id/ll_telecom_kitkat_info"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:background="@drawable/bg_card_inner"
-                android:padding="12dp"
-                android:layout_marginTop="8dp"
-                android:visibility="gone">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="KitKat Direct Routing Active (API 19)"
-                    android:textColor="@color/text_primary"
-                    android:textSize="13sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Android Telecom Calling Accounts were introduced in Android 6.0+. On Android 4.4, high-performance broadcast routing with direct hardware audio HAL is active."
-                    android:textColor="@color/text_secondary"
-                    android:textSize="12sp"
-                    android:layout_marginTop="4dp" />
             </LinearLayout>
 
         </LinearLayout>

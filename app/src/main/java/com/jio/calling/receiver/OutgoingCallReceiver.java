@@ -3,15 +3,21 @@ package com.jio.calling.receiver;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Build;
+import android.telecom.PhoneAccountHandle;
+import android.telecom.TelecomManager;
 import android.util.Log;
+
+import androidx.core.content.ContextCompat;
 
 import com.jio.calling.service.JioSipService;
 import com.jio.calling.util.AppPreferences;
 
 /**
  * Intercepts numbers dialed from the phone's stock native dialer.
- * Aborts cellular call and redirects through JioFiber landline if enabled.
- * Toggled via AppPreferences.
+ * Aborts cellular call and redirects through JioFiber landline when enabled.
+ * - On Android < 6.0: Enabled by default (Telecom Calling Accounts not available).
+ * - On Android >= 6.0: Disabled by default (Native Telecom Calling Accounts used instead).
  */
 public class OutgoingCallReceiver extends BroadcastReceiver {
     private static final String TAG = "OutgoingCallReceiver";
@@ -22,9 +28,9 @@ public class OutgoingCallReceiver extends BroadcastReceiver {
             return;
         }
 
-        // Check if interception is toggled on in settings
+        // Check if outgoing interception is enabled
         if (!AppPreferences.isCallInterceptionEnabled(context)) {
-            Log.i(TAG, "Call interception is disabled in settings. Permitting normal cellular call.");
+            Log.d(TAG, "Outgoing call interception is disabled. Skipping.");
             return;
         }
 
@@ -43,7 +49,17 @@ public class OutgoingCallReceiver extends BroadcastReceiver {
             return;
         }
 
-        Log.i(TAG, "Intercepted outgoing call from stock dialer to: " + dialedNumber);
+        // On Android 6.0+, if this call is already routed through Jio's ConnectionService, do not intercept
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            PhoneAccountHandle handle = intent.getParcelableExtra(TelecomManager.EXTRA_PHONE_ACCOUNT_HANDLE);
+            if (handle != null && handle.getComponentName() != null &&
+                    handle.getComponentName().getClassName().contains("JioConnectionService")) {
+                Log.i(TAG, "Call is bound to JioConnectionService PhoneAccount; permitting Telecom pass-through.");
+                return;
+            }
+        }
+
+        Log.i(TAG, "Intercepting outgoing call from stock dialer to: " + dialedNumber + " -> Routing via Jio Landline");
 
         // Abort the stock cellular call
         setResultData(null);
@@ -52,7 +68,7 @@ public class OutgoingCallReceiver extends BroadcastReceiver {
         Intent serviceIntent = new Intent(context, JioSipService.class);
         serviceIntent.setAction(JioSipService.ACTION_MAKE_CALL);
         serviceIntent.putExtra(JioSipService.EXTRA_PHONE_NUMBER, dialedNumber);
-        context.startService(serviceIntent);
+        ContextCompat.startForegroundService(context, serviceIntent);
     }
 
     /**

@@ -1,20 +1,30 @@
 package com.jio.calling.ui;
 
+import android.Manifest;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SwitchCompat;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import com.jio.calling.R;
 import com.jio.calling.gateway.GatewayAuthManager;
@@ -52,13 +62,12 @@ public class MainActivity extends AppCompatActivity implements JioRegistrationLi
     private TextView tvWifiSsid;
     private TextView tvStatusDesc;
 
-    // Call Interception
+    // Call Interception & Routing
     private SwitchCompat switchIntercept;
     private TextView tvInterceptStatus;
 
     // Android Telecom
-    private LinearLayout llTelecomControls;
-    private LinearLayout llTelecomKitkatInfo;
+    private LinearLayout cardTelecomSection;
     private SwitchCompat switchTelecom;
     private SwitchCompat switchTelecomUi;
     private Button btnOpenTelecomSettings;
@@ -88,9 +97,8 @@ public class MainActivity extends AppCompatActivity implements JioRegistrationLi
         // Turn screen on and display smoothly on dedicated landline phone
         getWindow().addFlags(
                 android.view.WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED |
-                android.view.WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD |
-                android.view.WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
-        );
+                        android.view.WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD |
+                        android.view.WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
 
         setContentView(R.layout.activity_main);
 
@@ -98,12 +106,60 @@ public class MainActivity extends AppCompatActivity implements JioRegistrationLi
         setupManagers();
         setupListeners();
 
+        checkAndRequestPermissions();
+
         // Start background 24/7 service
         Intent serviceIntent = new Intent(this, JioSipService.class);
         serviceIntent.setAction(JioSipService.ACTION_START);
-        startService(serviceIntent);
+        ContextCompat.startForegroundService(this, serviceIntent);
 
         updateAccountDisplay();
+    }
+
+    private static final int REQUEST_PERMISSIONS_CODE = 101;
+
+    private void checkAndRequestPermissions() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            List<String> permissions = new ArrayList<>();
+            permissions.add(Manifest.permission.RECORD_AUDIO);
+            permissions.add(Manifest.permission.READ_PHONE_STATE);
+            permissions.add(Manifest.permission.CALL_PHONE);
+            permissions.add(Manifest.permission.READ_CALL_LOG);
+            permissions.add(Manifest.permission.WRITE_CALL_LOG);
+
+            if (Build.VERSION.SDK_INT >= 33) {
+                permissions.add("android.permission.POST_NOTIFICATIONS");
+            }
+            if (Build.VERSION.SDK_INT <= 28) {
+                permissions.add(Manifest.permission.PROCESS_OUTGOING_CALLS);
+            }
+
+            List<String> permissionsToRequest = new ArrayList<>();
+            for (String perm : permissions) {
+                if (ContextCompat.checkSelfPermission(this, perm) != PackageManager.PERMISSION_GRANTED) {
+                    permissionsToRequest.add(perm);
+                }
+            }
+
+            if (!permissionsToRequest.isEmpty()) {
+                ActivityCompat.requestPermissions(
+                        this,
+                        permissionsToRequest.toArray(new String[0]),
+                        REQUEST_PERMISSIONS_CODE);
+            }
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQUEST_PERMISSIONS_CODE) {
+            Log.i(TAG, "Permissions updated by user.");
+            if (JioTelecomManager.isSupported() && AppPreferences.isTelecomEnabled(this)) {
+                JioTelecomManager.registerPhoneAccount(this);
+                updateTelecomStatusText();
+            }
+        }
     }
 
     private void initViews() {
@@ -122,8 +178,7 @@ public class MainActivity extends AppCompatActivity implements JioRegistrationLi
         switchIntercept = findViewById(R.id.switch_intercept);
         tvInterceptStatus = findViewById(R.id.tv_intercept_status);
 
-        llTelecomControls = findViewById(R.id.ll_telecom_controls);
-        llTelecomKitkatInfo = findViewById(R.id.ll_telecom_kitkat_info);
+        cardTelecomSection = findViewById(R.id.card_telecom_section);
         switchTelecom = findViewById(R.id.switch_telecom);
         switchTelecomUi = findViewById(R.id.switch_telecom_ui);
         btnOpenTelecomSettings = findViewById(R.id.btn_open_telecom_settings);
@@ -149,7 +204,8 @@ public class MainActivity extends AppCompatActivity implements JioRegistrationLi
     }
 
     private void setupListeners() {
-        // --- 1. Stock Dialer Interception Switch ---
+        // --- 1. Stock Dialer Interception (Enabled by default on < Android 6, disabled
+        // on Android 6+) ---
         boolean isInterceptEnabled = AppPreferences.isCallInterceptionEnabled(this);
         switchIntercept.setChecked(isInterceptEnabled);
         updateInterceptStatusText(isInterceptEnabled);
@@ -158,15 +214,18 @@ public class MainActivity extends AppCompatActivity implements JioRegistrationLi
             AppPreferences.setCallInterceptionEnabled(this, isChecked);
             updateInterceptStatusText(isChecked);
             String msg = isChecked
-                    ? "Stock dialer call interception ENABLED"
-                    : "Call interception DISABLED (Normal cellular calls active)";
+                    ? "Stock dialer call interception enabled"
+                    : "Stock dialer call interception disabled";
             Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
         });
 
         // --- 2. Android Telecom Integration ---
-        if (JioTelecomManager.isSupported()) {
-            llTelecomControls.setVisibility(View.VISIBLE);
-            llTelecomKitkatInfo.setVisibility(View.GONE);
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            // Android < 6.0: Hide the entire section of Android Telecom integration
+            cardTelecomSection.setVisibility(View.GONE);
+        } else {
+            // Android 6.0+: Keep Android Telecom section visible
+            cardTelecomSection.setVisibility(View.VISIBLE);
 
             boolean isTelecomEnabled = AppPreferences.isTelecomEnabled(this);
             switchTelecom.setChecked(isTelecomEnabled);
@@ -199,15 +258,12 @@ public class MainActivity extends AppCompatActivity implements JioRegistrationLi
             btnOpenTelecomSettings.setOnClickListener(v -> {
                 boolean opened = JioTelecomManager.openCallingAccountsSettings(this);
                 if (!opened) {
-                    Toast.makeText(this, "Could not open Calling Accounts settings directly", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Could not open Calling Accounts settings directly", Toast.LENGTH_SHORT)
+                            .show();
                 }
             });
 
             updateTelecomStatusText();
-        } else {
-            // KitKat / Pre-API 23: Hide modern switches and show informative compatibility card
-            llTelecomControls.setVisibility(View.GONE);
-            llTelecomKitkatInfo.setVisibility(View.VISIBLE);
         }
 
         // --- 3. Refresh Credentials / Router Sync ---
@@ -216,7 +272,7 @@ public class MainActivity extends AppCompatActivity implements JioRegistrationLi
             JioAccountStorage.clear(this);
             Intent refreshIntent = new Intent(this, JioSipService.class);
             refreshIntent.setAction(JioSipService.ACTION_START);
-            startService(refreshIntent);
+            ContextCompat.startForegroundService(this, refreshIntent);
         });
 
         // --- 4. Companion PIN Management ---
@@ -237,9 +293,9 @@ public class MainActivity extends AppCompatActivity implements JioRegistrationLi
         });
     }
 
-    private void updateInterceptStatusText(boolean enabled) {
-        if (enabled) {
-            tvInterceptStatus.setText("Active: Numbers dialed in phone app will route through Jio Landline");
+    private void updateInterceptStatusText(boolean isEnabled) {
+        if (isEnabled) {
+            tvInterceptStatus.setText("Active: Calls placed in phone dialer will route via Jio Landline");
             tvInterceptStatus.setTextColor(getResources().getColor(R.color.call_green));
         } else {
             tvInterceptStatus.setText("Disabled: Outgoing calls will proceed normally through cellular SIM");
@@ -248,7 +304,8 @@ public class MainActivity extends AppCompatActivity implements JioRegistrationLi
     }
 
     private void updateTelecomStatusText() {
-        if (!JioTelecomManager.isSupported()) return;
+        if (!JioTelecomManager.isSupported())
+            return;
 
         boolean isRegistered = JioTelecomManager.isPhoneAccountRegistered(this);
         boolean isEnabled = JioTelecomManager.isPhoneAccountEnabled(this);

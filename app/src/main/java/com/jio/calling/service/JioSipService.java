@@ -2,6 +2,8 @@ package com.jio.calling.service;
 
 import android.app.AlarmManager;
 import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.BroadcastReceiver;
@@ -42,6 +44,7 @@ import com.jio.calling.util.AppPreferences;
 public class JioSipService extends Service implements JioRegistrationListener, JioCallListener {
     private static final String TAG = "JioSipService";
     private static final int NOTIFICATION_ID = 1001;
+    private static final String CHANNEL_ID = "jio_landline_service";
 
     public static final String ACTION_START = "com.jio.calling.action.START";
     public static final String ACTION_STOP = "com.jio.calling.action.STOP";
@@ -68,6 +71,9 @@ public class JioSipService extends Service implements JioRegistrationListener, J
     public void onCreate() {
         super.onCreate();
         Log.i(TAG, "Creating JioSipService");
+
+        createNotificationChannel();
+        startForeground(NOTIFICATION_ID, buildNotification("Starting Jio Landline..."));
 
         initLocks();
         acquireWifiLockIfConnected();
@@ -122,6 +128,20 @@ public class JioSipService extends Service implements JioRegistrationListener, J
             } else if (ACTION_ANSWER_CALL.equals(action)) {
                 Log.i(TAG, "ACTION_ANSWER_CALL received");
                 sipManager.answerCall();
+                return START_STICKY;
+            } else if ("com.jio.calling.TEST_INCOMING".equals(action)) {
+                String number = intent.getStringExtra("REMOTE_NUMBER");
+                if (number == null || number.isEmpty()) number = "09876543210";
+                String name = intent.getStringExtra("REMOTE_NAME");
+                if (name == null || name.isEmpty()) name = "Telecom Test Caller";
+                Log.i(TAG, "Testing Telecom incoming call from: " + number + " (" + name + ")");
+                com.jio.calling.telecom.JioTelecomManager.addNewIncomingCall(this, number, name);
+                return START_STICKY;
+            } else if ("com.jio.calling.TEST_OUTGOING".equals(action)) {
+                String number = intent.getStringExtra("NUMBER");
+                if (number == null || number.isEmpty()) number = "199";
+                Log.i(TAG, "Testing Telecom outgoing call to: " + number);
+                com.jio.calling.telecom.JioTelecomManager.placeCall(this, number);
                 return START_STICKY;
             }
         }
@@ -414,6 +434,22 @@ public class JioSipService extends Service implements JioRegistrationListener, J
         releaseWifiLock();
     }
 
+    private void createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(
+                    CHANNEL_ID,
+                    "Jio Landline Service",
+                    NotificationManager.IMPORTANCE_LOW
+            );
+            channel.setDescription("Maintains background connection to JioFiber router");
+            channel.setShowBadge(false);
+            NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            if (nm != null) {
+                nm.createNotificationChannel(channel);
+            }
+        }
+    }
+
     private Notification buildNotification(String statusText) {
         Intent notificationIntent = new Intent(this, MainActivity.class);
         int pendingFlags = PendingIntent.FLAG_UPDATE_CURRENT;
@@ -422,7 +458,7 @@ public class JioSipService extends Service implements JioRegistrationListener, J
         }
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, pendingFlags);
 
-        return new NotificationCompat.Builder(this)
+        return new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle("Jio Landline")
                 .setContentText(statusText)
                 .setSmallIcon(android.R.drawable.sym_action_call)
@@ -523,6 +559,10 @@ public class JioSipService extends Service implements JioRegistrationListener, J
     @Override
     public void onCallConnecting() {
         acquireCallWakeLock();
+        if (com.jio.calling.telecom.JioTelecomManager.isSupported() && AppPreferences.isUseTelecomUiEnabled(this)) {
+            Log.i(TAG, "onCallConnecting: System Telecom In-Call UI is enabled, skipping InCallActivity");
+            return;
+        }
         Intent inCall = new Intent(this, InCallActivity.class);
         inCall.putExtra(InCallActivity.EXTRA_NUMBER, sipManager.getActiveCallNumber());
         inCall.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);

@@ -5,6 +5,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
 
+import androidx.core.content.ContextCompat;
+
 import com.jio.calling.service.JioSipService;
 
 /**
@@ -19,7 +21,7 @@ public class BootReceiver extends BroadcastReceiver {
             Log.i(TAG, "Device boot completed. Auto-starting JioSipService...");
             Intent serviceIntent = new Intent(context, JioSipService.class);
             serviceIntent.setAction(JioSipService.ACTION_START);
-            context.startService(serviceIntent);
+            ContextCompat.startForegroundService(context, serviceIntent);
         }
     }
 }

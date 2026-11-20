@@ -291,7 +291,7 @@ public class GatewayServer {
         Intent callIntent = new Intent(context, JioSipService.class);
         callIntent.setAction(JioSipService.ACTION_MAKE_CALL);
         callIntent.putExtra(JioSipService.EXTRA_PHONE_NUMBER, number);
-        context.startService(callIntent);
+        androidx.core.content.ContextCompat.startForegroundService(context, callIntent);
 
         JSONObject resp = new JSONObject();
         resp.put("status", "DIALING");

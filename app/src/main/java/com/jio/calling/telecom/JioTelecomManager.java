@@ -83,6 +83,14 @@ public class JioTelecomManager {
     }
 
     /**
+     * Places an outgoing call through Android Telecom using the registered Jio PhoneAccount.
+     */
+    public static boolean placeCall(Context context, String number) {
+        if (!isSupported()) return false;
+        return Api23Impl.placeCall(context, number);
+    }
+
+    /**
      * Isolated inner class holding all direct references to android.telecom.* and android.graphics.drawable.Icon.
      * Dalvik / ART will ONLY load this class on API 23+, completely preventing any class resolution crash on KitKat.
      */
@@ -107,8 +115,8 @@ public class JioTelecomManager {
                         : "Jio Landline";
 
                 PhoneAccount.Builder builder = PhoneAccount.builder(handle, "Jio Landline (" + number + ")")
-                        .setCapabilities(PhoneAccount.CAPABILITY_CALL_PROVIDER | PhoneAccount.CAPABILITY_CONNECTION_MANAGER)
-                        .setAddress(Uri.fromParts("sip", number + "@jio.com", null))
+                        .setCapabilities(PhoneAccount.CAPABILITY_CALL_PROVIDER)
+                        .setAddress(Uri.fromParts("tel", number, null))
                         .setSubscriptionAddress(Uri.fromParts("tel", number, null))
                         .setShortDescription("JioFiber VoIP Landline")
                         .addSupportedUriScheme("tel")
@@ -204,6 +212,24 @@ public class JioTelecomManager {
                 return true;
             } catch (Exception e) {
                 Log.e(TAG, "Failed to inject incoming call into TelecomManager: " + e.getMessage(), e);
+                return false;
+            }
+        }
+
+        static boolean placeCall(Context context, String number) {
+            try {
+                TelecomManager tm = (TelecomManager) context.getSystemService(Context.TELECOM_SERVICE);
+                if (tm == null) return false;
+
+                PhoneAccountHandle handle = getHandle(context);
+                Bundle extras = new Bundle();
+                extras.putParcelable(TelecomManager.EXTRA_PHONE_ACCOUNT_HANDLE, handle);
+                Uri uri = Uri.fromParts("tel", number != null ? number : "", null);
+                tm.placeCall(uri, extras);
+                Log.i(TAG, "Successfully placed call via TelecomManager to: " + number);
+                return true;
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to placeCall via TelecomManager: " + e.getMessage(), e);
                 return false;
             }
         }
