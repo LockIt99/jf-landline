@@ -504,10 +504,17 @@ public class JioSipService extends Service implements JioRegistrationListener, J
     private void safeStartForeground(int id, Notification notification) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             try {
-                startForeground(id, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL);
+                int type = android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL;
+                if (Build.VERSION.SDK_INT >= 34) { // Android 14+
+                    if (androidx.core.content.ContextCompat.checkSelfPermission(this, android.Manifest.permission.RECORD_AUDIO)
+                            == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                        type |= android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE;
+                    }
+                }
+                startForeground(id, notification, type);
                 return;
             } catch (Exception e) {
-                Log.w(TAG, "Could not startForeground with FOREGROUND_SERVICE_TYPE_PHONE_CALL: " + e.getMessage());
+                Log.w(TAG, "Could not startForeground with types: " + e.getMessage());
             }
         }
         startForeground(id, notification);

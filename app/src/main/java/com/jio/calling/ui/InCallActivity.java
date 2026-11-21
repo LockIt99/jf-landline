@@ -1,7 +1,10 @@
 package com.jio.calling.ui;
 
+import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.provider.CallLog;
@@ -11,6 +14,9 @@ import android.widget.Button;
 import android.widget.Chronometer;
 import android.widget.ImageButton;
 import android.widget.TextView;
+
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import com.jio.calling.R;
 import com.jio.calling.audio.JioAudioManager;
@@ -96,6 +102,12 @@ public class InCallActivity extends Activity implements JioCallListener {
 
         audioManager = new JioAudioManager(this);
         audioManager.startCallAudio();
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECORD_AUDIO}, 102);
+            }
+        }
 
         setupControls();
         setupDtmfPad();

@@ -28,6 +28,7 @@
     <!-- Foreground service permissions (Required for Android 9+ / API 28+) -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_PHONE_CALL" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <!-- Notification permission (Required for Android 13+ / API 33+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
@@ -75,7 +76,7 @@
         <!-- Foreground SIP background service -->
         <service
             android:name=".service.JioSipService"
-            android:foregroundServiceType="phoneCall"
+            android:foregroundServiceType="phoneCall|microphone"
             android:enabled="true"
             android:exported="false" />
 
