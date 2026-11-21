@@ -363,7 +363,10 @@ public class MainActivity extends AppCompatActivity implements JioRegistrationLi
 
         // Companion Gateway display
         if (authManager != null) {
-            String ip = (sipManager != null) ? sipManager.getLocalWifiIpAddress() : "192.168.29.X";
+            String ip = (sipManager != null) ? sipManager.getLocalWifiIpAddress() : "";
+            if (ip == null || ip.isEmpty()) {
+                ip = "192.168.29.X";
+            }
             tvGatewayInfo.setText("Companion Gateway: " + ip + ":8088");
             tvGatewayPin.setText("PIN: " + authManager.getPin());
             tvDiagIp.setText("Local IP: " + ip);

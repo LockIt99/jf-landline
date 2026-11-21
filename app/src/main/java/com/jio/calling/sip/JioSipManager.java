@@ -201,10 +201,14 @@ public class JioSipManager {
                 for (int i = 0; i < codecs.size(); i++) {
                     String id = codecs.get(i).getCodecId();
                     Log.i(TAG, "Available codec: " + id + " priority=" + codecs.get(i).getPriority());
-                    if (id.toLowerCase().contains("amr")) {
-                        short prio = id.toLowerCase().contains("amr-wb") ? (short) 255 : (short) 250;
-                        endpoint.codecSetPriority(id, prio);
-                        Log.i(TAG, "Promoted codec priority: " + id + " -> " + prio);
+                    boolean isWb = id.toLowerCase().contains("amr-wb");
+                    boolean isNb = id.toLowerCase().contains("amr") && !isWb;
+
+                    if (isNb) {
+                        // AMR-NB is the gold standard for JioFiber fixed-line VoIP (8000Hz mono).
+                        // Highest priority (255) ensures AMR-NB is offered and selected first over AMR-WB.
+                        endpoint.codecSetPriority(id, (short) 255);
+                        Log.i(TAG, "Promoted AMR-NB codec priority: " + id + " -> 255");
 
                         try {
                             CodecParam param = endpoint.codecGetParam(id);
@@ -264,10 +268,51 @@ public class JioSipManager {
                                     param.getSetting().setDecFmtp(decVec);
                                 }
                                 endpoint.codecSetParam(id, param);
-                                Log.i(TAG, "Configured AMR codec: 12.2kbps (Mode 7), no-VAD, PLC, octet-align=1, mode-set=0,1,2,3,4,5,6,7");
+                                Log.i(TAG, "Configured AMR-NB codec: 12.2kbps (Mode 7), no-VAD, PLC, octet-align=1, mode-set=0,1,2,3,4,5,6,7");
                             }
                         } catch (Exception fe) {
-                            Log.w(TAG, "Could not set AMR fmtp: " + fe.getMessage());
+                            Log.w(TAG, "Could not set AMR-NB fmtp: " + fe.getMessage());
+                        }
+                    } else if (isWb) {
+                        // AMR-WB has lower priority (240) than AMR-NB (255) so 8000Hz AMR-NB is preferred.
+                        // Configure valid AMR-WB bitrates (23.85 kbps Mode 8) and octet-align to prevent encoder failure.
+                        endpoint.codecSetPriority(id, (short) 240);
+                        Log.i(TAG, "Configured AMR-WB codec priority: " + id + " -> 240");
+
+                        try {
+                            CodecParam param = endpoint.codecGetParam(id);
+                            if (param != null) {
+                                if (param.getInfo() != null) {
+                                    param.getInfo().setAvgBps(23850);
+                                    param.getInfo().setMaxBps(23850);
+                                }
+
+                                if (param.getSetting() != null) {
+                                    param.getSetting().setVad(false);
+                                    param.getSetting().setCng(false);
+                                    param.getSetting().setPlc(true);
+
+                                    CodecFmtpVector fmtpVec = new CodecFmtpVector();
+                                    CodecFmtp f0 = new CodecFmtp();
+                                    f0.setName("octet-align");
+                                    f0.setVal("1");
+                                    fmtpVec.add(f0);
+
+                                    param.getSetting().setEncFmtp(fmtpVec);
+
+                                    CodecFmtpVector decVec = new CodecFmtpVector();
+                                    CodecFmtp d0 = new CodecFmtp();
+                                    d0.setName("octet-align");
+                                    d0.setVal("1");
+                                    decVec.add(d0);
+
+                                    param.getSetting().setDecFmtp(decVec);
+                                }
+                                endpoint.codecSetParam(id, param);
+                                Log.i(TAG, "Configured AMR-WB codec: 23.85kbps, octet-align=1");
+                            }
+                        } catch (Exception fe) {
+                            Log.w(TAG, "Could not set AMR-WB fmtp: " + fe.getMessage());
                         }
                     } else if (id.toLowerCase().contains("pcma") || id.toLowerCase().contains("pcmu")) {
                         endpoint.codecSetPriority(id, (short) 50);
@@ -422,13 +467,17 @@ public class JioSipManager {
             Log.i(TAG, "Configured SIP Outbound Instance ID: " + instanceId + " (MAC: " + account.getVirtualMac() + ")");
             accCfg.getNatConfig().setUdpKaIntervalSec(15);
 
-            // Pin media transport to local Wi-Fi interface (wlan0)
-            String localIp = getLocalWifiIpAddress();
-            if (localIp != null && !localIp.isEmpty()) {
-                Log.i(TAG, "Configuring media transport address: " + localIp);
+            // Configure media transport
+            String registrarHost = account.getRegistrarHost();
+            String localIp = getLocalIpAddress(registrarHost);
+            Log.i(TAG, "Configuring media transport address: " + (!localIp.isEmpty() ? localIp : "<auto>"));
+            if (!localIp.isEmpty()) {
                 accCfg.getMediaConfig().getTransportConfig().setPublicAddress(localIp);
-                accCfg.getMediaConfig().getTransportConfig().setBoundAddress(localIp);
             }
+            // CRITICAL: Leaving boundAddress empty ("") binds the RTP UDP sockets to INADDR_ANY (0.0.0.0).
+            // This allows the OS kernel to dynamically receive and route RTP packets across all interfaces
+            // (Wi-Fi, Ethernet, or NetBird VPN tunnel) and completely prevents EADDRNOTAVAIL (cannot assign requested address).
+            accCfg.getMediaConfig().getTransportConfig().setBoundAddress("");
 
             // Standard JioFiber RTP port range (matching official juicejseconfig.cfg and sidhant-sipserver)
             // Port 52000-52200 is the designated local VoIP RTP port allowed through the ONT firewall.
@@ -598,38 +647,85 @@ public class JioSipManager {
         }
     }
 
-    public String getLocalWifiIpAddress() {
+    public String getLocalIpAddress() {
+        String targetHost = (currentAccount != null && currentAccount.getRegistrarHost() != null)
+                ? currentAccount.getRegistrarHost()
+                : "192.168.29.1";
+        return getLocalIpAddress(targetHost);
+    }
+
+    public static String getLocalIpAddress(String targetHost) {
+        if (targetHost == null || targetHost.isEmpty()) {
+            targetHost = "192.168.29.1";
+        }
+        if (targetHost.startsWith("sip:")) targetHost = targetHost.substring(4);
+        int colon = targetHost.indexOf(':');
+        if (colon != -1) targetHost = targetHost.substring(0, colon);
+        int semi = targetHost.indexOf(';');
+        if (semi != -1) targetHost = targetHost.substring(0, semi);
+
+        // 1. Kernel routing table lookup via UDP connect trick:
+        // Connects a dummy UDP socket to the target host to let the OS kernel FIB routing
+        // select the exact source IP and network interface (Wi-Fi, Ethernet, Cellular, or VPN like NetBird/WireGuard).
+        // No actual packets are transmitted on the network.
         try {
-            // First check Wi-Fi interface (wlan0)
-            for (java.util.Enumeration<java.net.NetworkInterface> en = java.net.NetworkInterface.getNetworkInterfaces(); en.hasMoreElements();) {
-                java.net.NetworkInterface intf = en.nextElement();
-                String ifName = intf.getName() != null ? intf.getName().toLowerCase(Locale.US) : "";
-                if (ifName.contains("wlan") || ifName.contains("eth")) {
-                    for (java.util.Enumeration<java.net.InetAddress> enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements();) {
-                        java.net.InetAddress inetAddress = enumIpAddr.nextElement();
-                        if (!inetAddress.isLoopbackAddress() && inetAddress instanceof java.net.Inet4Address) {
-                            return inetAddress.getHostAddress();
-                        }
-                    }
+            java.net.DatagramSocket socket = new java.net.DatagramSocket();
+            socket.connect(java.net.InetAddress.getByName(targetHost), 5068);
+            java.net.InetAddress localAddr = socket.getLocalAddress();
+            socket.close();
+            if (localAddr != null && !localAddr.isAnyLocalAddress() && !localAddr.isLoopbackAddress()) {
+                String ip = localAddr.getHostAddress();
+                if (ip != null && !ip.isEmpty() && !"0.0.0.0".equals(ip)) {
+                    Log.i(TAG, "Kernel routing table resolved source IP: " + ip + " for destination " + targetHost);
+                    return ip;
                 }
             }
-            // Fallback: any 192.168.x IPv4 address
+        } catch (Exception e) {
+            Log.d(TAG, "Kernel UDP routing probe to " + targetHost + " not available: " + e.getMessage());
+        }
+
+        // 2. Active network interface inspection fallback:
+        // Prioritize VPN tunnel interfaces (wt, tun, vpn), followed by Wi-Fi (wlan) and Ethernet (eth).
+        try {
+            java.util.List<String> wifiOrEthIps = new java.util.ArrayList<>();
+            java.util.List<String> otherIps = new java.util.ArrayList<>();
+
             for (java.util.Enumeration<java.net.NetworkInterface> en = java.net.NetworkInterface.getNetworkInterfaces(); en.hasMoreElements();) {
                 java.net.NetworkInterface intf = en.nextElement();
+                if (!intf.isUp() || intf.isLoopback()) continue;
+                String ifName = intf.getName() != null ? intf.getName().toLowerCase(Locale.US) : "";
+
                 for (java.util.Enumeration<java.net.InetAddress> enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements();) {
                     java.net.InetAddress inetAddress = enumIpAddr.nextElement();
                     if (!inetAddress.isLoopbackAddress() && inetAddress instanceof java.net.Inet4Address) {
                         String ip = inetAddress.getHostAddress();
-                        if (ip.startsWith("192.168.")) {
+                        if (ifName.contains("wt") || ifName.contains("tun") || ifName.contains("vpn")) {
+                            Log.i(TAG, "Found active VPN tunnel interface IP: " + ip + " on " + ifName);
                             return ip;
+                        } else if (ifName.contains("wlan") || ifName.contains("eth")) {
+                            wifiOrEthIps.add(ip);
+                        } else {
+                            otherIps.add(ip);
                         }
                     }
                 }
             }
+
+            if (!wifiOrEthIps.isEmpty()) {
+                return wifiOrEthIps.get(0);
+            }
+            if (!otherIps.isEmpty()) {
+                return otherIps.get(0);
+            }
         } catch (Exception e) {
-            Log.w(TAG, "Error getting local IP: " + e.getMessage());
+            Log.w(TAG, "Error enumerating network interfaces: " + e.getMessage());
         }
-        return "192.168.29.14";
+
+        return "";
+    }
+
+    public String getLocalWifiIpAddress() {
+        return getLocalIpAddress();
     }
 
     public static String getLocalWifiMacAddress(Context context) {

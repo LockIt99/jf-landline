@@ -59,6 +59,10 @@ public class JioAccount implements Serializable {
     public long getExpiresAtTimestamp() { return expiresAtTimestamp; }
     public void setExpiresAtTimestamp(long expiresAtTimestamp) { this.expiresAtTimestamp = expiresAtTimestamp; }
 
+    public String getRegistrarHost() {
+        return getProxyHost();
+    }
+
     public String getProxyUri() {
         return "sip:" + getProxyHost() + ":" + proxyPort + ";transport=tls";
     }

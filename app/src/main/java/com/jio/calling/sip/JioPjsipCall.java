@@ -243,6 +243,7 @@ public class JioPjsipCall extends Call {
                 return;
             AudDevManager adm = ep.audDevManager();
             AudioMedia playDev = adm != null ? adm.getPlaybackDevMedia() : null;
+            AudioMedia capDev = adm != null ? adm.getCaptureDevMedia() : null;
             AudioMedia callAudMed = null;
             try {
                 callAudMed = getAudioMedia(-1);
@@ -251,8 +252,17 @@ public class JioPjsipCall extends Call {
 
             float callTxBoost = isSpeaker ? 1.6f : 1.1f; // Clean +4dB boost on speakerphone without clipping PCM
                                                          // headroom
-            float callRxBoost = 1.0f; // Unity gain on microphone to prevent acoustic feedback and echo distortion
+            float callRxBoost = 1.5f; // Boost incoming microphone audio sent to RTP encoder
             float playDevRxBoost = 1.0f; // Unity gain on playback port to avoid compounding gain distortion
+
+            if (capDev != null) {
+                try {
+                    capDev.adjustTxLevel(1.5f); // Boost microphone input into conference bridge (+3.5 dB)
+                    logToFile("applyVolumeBoost: capDev.adjustTxLevel(1.5f) applied");
+                } catch (Exception e) {
+                    logToFile("applyVolumeBoost: capDev adjustTxLevel error: " + e.getMessage());
+                }
+            }
 
             if (callAudMed != null) {
                 try {

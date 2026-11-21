@@ -99,7 +99,7 @@ public class JioSipService extends Service implements JioRegistrationListener, J
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        startForeground(NOTIFICATION_ID, buildNotification("Starting Jio Landline..."));
+        safeStartForeground(NOTIFICATION_ID, buildNotification("Starting Jio Landline..."));
 
         if (intent != null) {
             String action = intent.getAction();
@@ -201,8 +201,15 @@ public class JioSipService extends Service implements JioRegistrationListener, J
 
     private void checkAndSwitchToJioWifi() {
         try {
+            // If the router is already reachable (e.g. over NetBird VPN, Ethernet, or current Wi-Fi),
+            // do not disrupt the connection by attempting to switch SSIDs.
+            if (isRouterReachable("192.168.29.1")) {
+                Log.i(TAG, "Jio router 192.168.29.1 is already reachable; skipping Wi-Fi switch.");
+                return;
+            }
+
             WifiManager wm = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
-            if (wm == null) return;
+            if (wm == null || !wm.isWifiEnabled()) return;
             android.net.DhcpInfo dhcp = wm.getDhcpInfo();
             int gateway = dhcp != null ? dhcp.gateway : 0;
             String gwIp = String.format("%d.%d.%d.%d", (gateway & 0xFF), (gateway >> 8 & 0xFF), (gateway >> 16 & 0xFF), (gateway >> 24 & 0xFF));
@@ -212,6 +219,24 @@ public class JioSipService extends Service implements JioRegistrationListener, J
             }
         } catch (Exception e) {
             Log.w(TAG, "Wi-Fi gateway check failed: " + e.getMessage());
+        }
+    }
+
+    private boolean isRouterReachable(String host) {
+        try {
+            java.net.Socket s = new java.net.Socket();
+            s.connect(new java.net.InetSocketAddress(host, 5068), 1000);
+            s.close();
+            return true;
+        } catch (Exception ignored) {
+            try {
+                java.net.Socket s = new java.net.Socket();
+                s.connect(new java.net.InetSocketAddress(host, 8080), 1000);
+                s.close();
+                return true;
+            } catch (Exception ignored2) {
+                return false;
+            }
         }
     }
 
@@ -473,7 +498,19 @@ public class JioSipService extends Service implements JioRegistrationListener, J
     }
 
     private void updateNotification(String text) {
-        startForeground(NOTIFICATION_ID, buildNotification(text));
+        safeStartForeground(NOTIFICATION_ID, buildNotification(text));
+    }
+
+    private void safeStartForeground(int id, Notification notification) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            try {
+                startForeground(id, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL);
+                return;
+            } catch (Exception e) {
+                Log.w(TAG, "Could not startForeground with FOREGROUND_SERVICE_TYPE_PHONE_CALL: " + e.getMessage());
+            }
+        }
+        startForeground(id, notification);
     }
 
     private void registerNetworkMonitor() {
@@ -484,15 +521,20 @@ public class JioSipService extends Service implements JioRegistrationListener, J
                 NetworkInfo activeNetwork = cm != null ? cm.getActiveNetworkInfo() : null;
                 boolean isConnected = activeNetwork != null && activeNetwork.isConnectedOrConnecting();
 
-                if (isConnected && activeNetwork.getType() == ConnectivityManager.TYPE_WIFI) {
-                    Log.i(TAG, "Wi-Fi connected. Re-checking registration...");
-                    acquireWifiLock();
+                if (isConnected) {
+                    String typeName = activeNetwork.getTypeName();
+                    Log.i(TAG, "Network connected (type=" + typeName + "). Re-checking registration...");
+                    if (activeNetwork.getType() == ConnectivityManager.TYPE_WIFI) {
+                        acquireWifiLock();
+                    } else {
+                        releaseWifiLock();
+                    }
                     sipManager.handleNetworkChange();
                     new Thread(JioSipService.this::loadOrDiscoverAccount).start();
                 } else {
-                    Log.w(TAG, "Wi-Fi disconnected. SIP offline.");
+                    Log.w(TAG, "Network disconnected. SIP offline.");
                     releaseWifiLock();
-                    updateNotification("Wi-Fi disconnected");
+                    updateNotification("Network disconnected");
                 }
             }
         };
