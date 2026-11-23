@@ -175,6 +175,20 @@ public class JioTelecomManager {
 
         static boolean openCallingAccountsSettings(Context context) {
             try {
+                // Realme/ColorOS workaround: explicitly launch hidden activity
+                if ("realme".equalsIgnoreCase(Build.MANUFACTURER) || "oppo".equalsIgnoreCase(Build.MANUFACTURER)) {
+                    Intent intent = new Intent();
+                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK);
+                    intent.setComponent(new ComponentName("com.android.server.telecom",
+                            "com.android.server.telecom.settings.EnableAccountPreferenceActivity"));
+                    context.startActivity(intent);
+                    return true;
+                }
+            } catch (Exception e) {
+                Log.w(TAG, "Failed to launch Realme/Oppo workaround settings: " + e.getMessage());
+            }
+
+            try {
                 Intent intent = new Intent(TelecomManager.ACTION_CHANGE_PHONE_ACCOUNTS);
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 context.startActivity(intent);
