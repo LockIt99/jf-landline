@@ -1,0 +1,14 @@
+# Force LF line endings for shell scripts and gradlew to prevent
+# "/usr/bin/env: 'bash\r': No such file or directory" errors on Windows.
+# Without this, core.autocrlf=true converts shell scripts to CRLF,
+# breaking the shebang line and any script that depends on Unix line endings.
+
+# Gradle and shell scripts
+gradlew    text eol=lf
+*.sh       text eol=lf
+Makefile   text eol=lf
+
+# Preserve original line endings for binary/auto-detected files
+*.jpg    binary
+*.png    binary
+*.zip    binary
