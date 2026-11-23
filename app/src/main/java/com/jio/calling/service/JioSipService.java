@@ -486,7 +486,7 @@ public class JioSipService extends Service implements JioRegistrationListener, J
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             try {
                 int type = android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL;
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) { // Android 10+
+                if (Build.VERSION.SDK_INT >= 29) { // Android 10+
                     if (androidx.core.content.ContextCompat.checkSelfPermission(this, android.Manifest.permission.RECORD_AUDIO)
                             == android.content.pm.PackageManager.PERMISSION_GRANTED) {
                         type |= android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE;
