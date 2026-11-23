@@ -3,8 +3,10 @@
   "description": "Devcontainer configuration for building and developing the Jio Landline Android application",
   "build": {
     "dockerfile": "Dockerfile",
-    "context": ".."
+    "context": "..",
+    "options": ["--network=host"]
   },
+  "runArgs": ["--network=host"],
   "postCreateCommand": "chmod +x gradlew && sed -i 's/\\r$//' gradlew && ./gradlew --version",
   "customizations": {
     "vscode": {
@@ -27,7 +29,6 @@
       }
     }
   },
-  "forwardPorts": [8088],
   "runActions": {
     "onContainerCreate": {
       "path": "/bin/bash",
