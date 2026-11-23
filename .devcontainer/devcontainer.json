@@ -1,0 +1,41 @@
+{
+  "name": "Jio Landline Android DevContainer",
+  "description": "Devcontainer configuration for building and developing the Jio Landline Android application",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "postCreateCommand": "chmod +x gradlew && sed -i 's/\\r$//' gradlew && ./gradlew --version",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "redhat.java",
+        "redhat.vscode-gradle",
+        "mauve.vscode-android-xml",
+        "fwcd.kotlin",
+        "GitHub.vscode-pull-request-github",
+        "ms-azuretools.vscode-docker",
+        "vscode-icons.vscode-icons"
+      ],
+      "settings": {
+        "java.configuration.updateBuildConfiguration": "interactive",
+        "java.jdt.ls.vmArguments": "-Xmx1g",
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "terminal.integrated.defaultProfile.windows": "PowerShell",
+        "gradle.wrapperDirectory": "gradle/wrapper",
+        "gradle.javaHome": "/usr/lib/jvm/java-17-openjdk-amd64"
+      }
+    }
+  },
+  "forwardPorts": [8088],
+  "runActions": {
+    "onContainerCreate": {
+      "path": "/bin/bash",
+      "args": ["-c", "chmod +x /workspace/gradlew"]
+    },
+    "onContainerStart": {
+      "path": "/bin/bash",
+      "args": ["-c", "chmod +x /workspace/gradlew"]
+    }
+  }
+}
