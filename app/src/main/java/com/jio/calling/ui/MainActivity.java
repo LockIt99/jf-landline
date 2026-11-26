@@ -122,6 +122,7 @@ public class MainActivity extends AppCompatActivity implements JioRegistrationLi
     }
 
     private static final int REQUEST_PERMISSIONS_CODE = 101;
+    private static final int REQUEST_CODE_ROLE_CALL_REDIRECTION = 102;
 
     private void checkAndRequestPermissions() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -165,6 +166,26 @@ public class MainActivity extends AppCompatActivity implements JioRegistrationLi
             if (JioTelecomManager.isSupported() && AppPreferences.isTelecomEnabled(this)) {
                 JioTelecomManager.registerPhoneAccount(this);
                 updateTelecomStatusText();
+            }
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQUEST_CODE_ROLE_CALL_REDIRECTION) {
+            if (resultCode == RESULT_OK) {
+                Log.i(TAG, "ROLE_CALL_REDIRECTION granted by user.");
+                AppPreferences.setCallInterceptionEnabled(this, true);
+                if (switchIntercept != null) switchIntercept.setChecked(true);
+                updateInterceptStatusText(true);
+                Toast.makeText(this, "Call redirection granted. Stock dialer calls will route via Jio Landline.", Toast.LENGTH_SHORT).show();
+            } else {
+                Log.w(TAG, "ROLE_CALL_REDIRECTION denied by user.");
+                AppPreferences.setCallInterceptionEnabled(this, false);
+                if (switchIntercept != null) switchIntercept.setChecked(false);
+                updateInterceptStatusText(false);
+                Toast.makeText(this, "Call redirection permission was not granted.", Toast.LENGTH_SHORT).show();
             }
         }
     }
@@ -294,14 +315,14 @@ public class MainActivity extends AppCompatActivity implements JioRegistrationLi
                     // Not enabled yet: try standard AOSP first
                     waitingForAospAccountEnable = true;
                     boolean opened = JioTelecomManager.openStandardCallingAccountsSettings(this);
-                if (!opened) {
+                    if (!opened) {
                         // Standard intent failed to launch, fall back to Realme screen immediately
                         waitingForAospAccountEnable = false;
                         waitingForRealmeAccountEnable = true;
                         boolean realmeOpened = JioTelecomManager.openRealmeCallingAccountsSettings(this);
                         if (!realmeOpened) {
                             Toast.makeText(this, "Could not open Calling Accounts settings directly", Toast.LENGTH_SHORT).show();
-                }
+                        }
                     }
                 }
             });
@@ -427,7 +448,29 @@ public class MainActivity extends AppCompatActivity implements JioRegistrationLi
     @Override
     protected void onResume() {
         super.onResume();
+        syncCallRedirectionState();
+        handleCallingAccountSettingsResume();
         updateAccountDisplay();
+    }
+
+    private void syncCallRedirectionState() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            RoleManager roleManager = (RoleManager) getSystemService(Context.ROLE_SERVICE);
+            if (roleManager != null) {
+                boolean roleHeld = roleManager.isRoleHeld(RoleManager.ROLE_CALL_REDIRECTION);
+                if (!roleHeld && AppPreferences.isCallInterceptionEnabled(this)) {
+                    Log.i(TAG, "ROLE_CALL_REDIRECTION is no longer held. Disabling interception.");
+                    AppPreferences.setCallInterceptionEnabled(this, false);
+                }
+            }
+        }
+        boolean isInterceptEnabled = AppPreferences.isCallInterceptionEnabled(this);
+        if (switchIntercept != null && switchIntercept.isChecked() != isInterceptEnabled) {
+            switchIntercept.setChecked(isInterceptEnabled);
+        }
+        if (tvInterceptStatus != null) {
+            updateInterceptStatusText(isInterceptEnabled);
+        }
     }
 
     private void handleCallingAccountSettingsResume() {

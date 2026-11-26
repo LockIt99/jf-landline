@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Network permissions for router discovery & SIP signaling -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -82,7 +83,7 @@
             android:enabled="true"
             android:exported="false" />
 
-        <!-- Stock dialer interception receiver (legacy Android < 6.0) -->
+        <!-- Stock dialer interception receiver (legacy Android < 10 / API < 29) -->
         <receiver
             android:name=".receiver.OutgoingCallReceiver"
             android:enabled="@bool/is_legacy_interception_supported"
@@ -91,6 +92,16 @@
                 <action android:name="android.intent.action.NEW_OUTGOING_CALL" />
             </intent-filter>
         </receiver>
+
+        <!-- Stock dialer call redirection service (Android 10+ / API 29+) -->
+        <service
+            android:name=".telecom.JioCallRedirectionService"
+            android:permission="android.permission.BIND_CALL_REDIRECTION_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.telecom.CallRedirectionService" />
+            </intent-filter>
+        </service>
 
         <!-- Telecom Calling Account ConnectionService (Android 6.0+) -->
         <service

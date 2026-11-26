@@ -213,18 +213,18 @@ public class JioTelecomManager {
 
         static boolean openRealmeCallingAccountsSettings(Context context) {
             try {
-                    Intent intent = new Intent();
-                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK);
-                    intent.setComponent(new ComponentName("com.android.server.telecom",
-                            "com.android.server.telecom.settings.EnableAccountPreferenceActivity"));
-                    context.startActivity(intent);
+                Intent intent = new Intent();
+                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK);
+                intent.setComponent(new ComponentName("com.android.server.telecom",
+                        "com.android.server.telecom.settings.EnableAccountPreferenceActivity"));
+                context.startActivity(intent);
                 Log.i(TAG, "Launched Realme EnableAccountPreferenceActivity");
-                    return true;
+                return true;
             } catch (Exception e) {
                 Log.w(TAG, "Failed Realme EnableAccountPreferenceActivity: " + e.getMessage());
                 return false;
-                }
             }
+        }
 
         static boolean openCallingAccountsSettings(Context context) {
             // 1. Try standard AOSP first
