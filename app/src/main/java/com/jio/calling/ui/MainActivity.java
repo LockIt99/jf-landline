@@ -206,19 +206,43 @@ public class MainActivity extends AppCompatActivity implements JioRegistrationLi
     }
 
     private void setupListeners() {
-        // --- 1. Stock Dialer Interception (Enabled by default on < Android 6, disabled
-        // on Android 6+) ---
+        // --- 1. Stock Dialer Interception ---
+        // Android < 10 (API < 29): Legacy OutgoingCallReceiver (ACTION_NEW_OUTGOING_CALL)
+        // Android 10+ (API 29+): Modern CallRedirectionService (ROLE_CALL_REDIRECTION)
         boolean isInterceptEnabled = AppPreferences.isCallInterceptionEnabled(this);
         switchIntercept.setChecked(isInterceptEnabled);
         updateInterceptStatusText(isInterceptEnabled);
 
         switchIntercept.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            AppPreferences.setCallInterceptionEnabled(this, isChecked);
-            updateInterceptStatusText(isChecked);
-            String msg = isChecked
-                    ? "Stock dialer call interception enabled"
-                    : "Stock dialer call interception disabled";
-            Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
+            if (!buttonView.isPressed()) {
+                return; // Ignore programmatic UI updates
+            }
+            if (isChecked) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    RoleManager roleManager = (RoleManager) getSystemService(Context.ROLE_SERVICE);
+                    if (roleManager != null && roleManager.isRoleAvailable(RoleManager.ROLE_CALL_REDIRECTION)) {
+                        if (roleManager.isRoleHeld(RoleManager.ROLE_CALL_REDIRECTION)) {
+                            AppPreferences.setCallInterceptionEnabled(this, true);
+                            updateInterceptStatusText(true);
+                            Toast.makeText(this, "Stock dialer call interception enabled", Toast.LENGTH_SHORT).show();
+                        } else {
+                            Intent roleIntent = roleManager.createRequestRoleIntent(RoleManager.ROLE_CALL_REDIRECTION);
+                            startActivityForResult(roleIntent, REQUEST_CODE_ROLE_CALL_REDIRECTION);
+                        }
+                    } else {
+                        Toast.makeText(this, "Call redirection role is not available on this device", Toast.LENGTH_SHORT).show();
+                        switchIntercept.setChecked(false);
+                    }
+                } else {
+                    AppPreferences.setCallInterceptionEnabled(this, true);
+                    updateInterceptStatusText(true);
+                    Toast.makeText(this, "Stock dialer call interception enabled (Legacy Broadcast)", Toast.LENGTH_SHORT).show();
+                }
+            } else {
+                AppPreferences.setCallInterceptionEnabled(this, false);
+                updateInterceptStatusText(false);
+                Toast.makeText(this, "Stock dialer call interception disabled", Toast.LENGTH_SHORT).show();
+            }
         });
 
         // --- 2. Android Telecom Integration ---
