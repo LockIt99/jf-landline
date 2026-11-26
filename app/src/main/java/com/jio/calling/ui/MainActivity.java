@@ -1,6 +1,7 @@
 package com.jio.calling.ui;
 
 import android.Manifest;
+import android.app.role.RoleManager;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
@@ -89,6 +90,10 @@ public class MainActivity extends AppCompatActivity implements JioRegistrationLi
 
     private JioSipManager sipManager;
     private GatewayAuthManager authManager;
+
+    // Tracking flags for AOSP -> Realme Calling Accounts settings flow
+    private boolean waitingForAospAccountEnable = false;
+    private boolean waitingForRealmeAccountEnable = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -282,10 +287,22 @@ public class MainActivity extends AppCompatActivity implements JioRegistrationLi
             });
 
             btnOpenTelecomSettings.setOnClickListener(v -> {
-                boolean opened = JioTelecomManager.openCallingAccountsSettings(this);
+                if (JioTelecomManager.isPhoneAccountEnabled(this)) {
+                    // Already enabled: open standard or fallback settings to view/adjust
+                    JioTelecomManager.openCallingAccountsSettings(this);
+                } else {
+                    // Not enabled yet: try standard AOSP first
+                    waitingForAospAccountEnable = true;
+                    boolean opened = JioTelecomManager.openStandardCallingAccountsSettings(this);
                 if (!opened) {
-                    Toast.makeText(this, "Could not open Calling Accounts settings directly", Toast.LENGTH_SHORT)
-                            .show();
+                        // Standard intent failed to launch, fall back to Realme screen immediately
+                        waitingForAospAccountEnable = false;
+                        waitingForRealmeAccountEnable = true;
+                        boolean realmeOpened = JioTelecomManager.openRealmeCallingAccountsSettings(this);
+                        if (!realmeOpened) {
+                            Toast.makeText(this, "Could not open Calling Accounts settings directly", Toast.LENGTH_SHORT).show();
+                }
+                    }
                 }
             });
 
@@ -411,6 +428,34 @@ public class MainActivity extends AppCompatActivity implements JioRegistrationLi
     protected void onResume() {
         super.onResume();
         updateAccountDisplay();
+    }
+
+    private void handleCallingAccountSettingsResume() {
+        if (!JioTelecomManager.isSupported()) return;
+
+        boolean isEnabled = JioTelecomManager.isPhoneAccountEnabled(this);
+
+        if (waitingForAospAccountEnable) {
+            waitingForAospAccountEnable = false;
+            if (!isEnabled) {
+                // User came back from standard AOSP screen, but account is not enabled (e.g. empty/carrier screen on Realme)
+                Log.i(TAG, "Standard AOSP screen did not enable Calling Account. Falling back to Realme-specific screen...");
+                waitingForRealmeAccountEnable = true;
+                Toast.makeText(this, "Standard screen did not have Calling Accounts. Opening Realme screen...", Toast.LENGTH_LONG).show();
+                JioTelecomManager.openRealmeCallingAccountsSettings(this);
+            } else {
+                Log.i(TAG, "Account enabled via standard screen.");
+                Toast.makeText(this, "Jio Landline calling account enabled successfully!", Toast.LENGTH_SHORT).show();
+            }
+        } else if (waitingForRealmeAccountEnable) {
+            waitingForRealmeAccountEnable = false;
+            if (isEnabled) {
+                Log.i(TAG, "Account enabled via Realme screen.");
+                Toast.makeText(this, "Jio Landline calling account enabled successfully!", Toast.LENGTH_SHORT).show();
+            } else {
+                Log.w(TAG, "User returned from Realme screen without enabling Jio Landline.");
+            }
+        }
     }
 
     // --- JioRegistrationListener ---

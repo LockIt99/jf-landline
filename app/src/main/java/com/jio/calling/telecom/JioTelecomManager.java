@@ -68,10 +68,35 @@ public class JioTelecomManager {
 
     /**
      * Launches the system Android Calling Accounts settings screen.
+     * Tries standard AOSP first, falling back to Realme-specific hidden activity if needed.
      */
     public static boolean openCallingAccountsSettings(Context context) {
         if (!isSupported()) return false;
         return Api23Impl.openCallingAccountsSettings(context);
+    }
+
+    /**
+     * Explicitly launches standard AOSP Telecom calling accounts screen.
+     */
+    public static boolean openStandardCallingAccountsSettings(Context context) {
+        if (!isSupported()) return false;
+        return Api23Impl.openStandardCallingAccountsSettings(context);
+    }
+
+    /**
+     * Explicitly launches Realme/ColorOS hidden calling accounts toggle screen.
+     */
+    public static boolean openRealmeCallingAccountsSettings(Context context) {
+        if (!isSupported()) return false;
+        return Api23Impl.openRealmeCallingAccountsSettings(context);
+    }
+
+    /**
+     * Returns the PhoneAccountHandle for the Jio Landline VoIP account.
+     */
+    public static PhoneAccountHandle getPhoneAccountHandle(Context context) {
+        if (!isSupported()) return null;
+        return Api23Impl.getHandle(context);
     }
 
     /**
@@ -173,28 +198,42 @@ public class JioTelecomManager {
             return false;
         }
 
-        static boolean openCallingAccountsSettings(Context context) {
+        static boolean openStandardCallingAccountsSettings(Context context) {
             try {
-                // Realme/ColorOS workaround: explicitly launch hidden activity
-                if ("realme".equalsIgnoreCase(Build.MANUFACTURER) || "oppo".equalsIgnoreCase(Build.MANUFACTURER)) {
+                Intent intent = new Intent(TelecomManager.ACTION_CHANGE_PHONE_ACCOUNTS);
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                context.startActivity(intent);
+                Log.i(TAG, "Launched standard ACTION_CHANGE_PHONE_ACCOUNTS");
+                return true;
+            } catch (Exception e) {
+                Log.w(TAG, "Failed standard ACTION_CHANGE_PHONE_ACCOUNTS: " + e.getMessage());
+                return false;
+            }
+        }
+
+        static boolean openRealmeCallingAccountsSettings(Context context) {
+            try {
                     Intent intent = new Intent();
                     intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK);
                     intent.setComponent(new ComponentName("com.android.server.telecom",
                             "com.android.server.telecom.settings.EnableAccountPreferenceActivity"));
                     context.startActivity(intent);
+                Log.i(TAG, "Launched Realme EnableAccountPreferenceActivity");
                     return true;
-                }
             } catch (Exception e) {
-                Log.w(TAG, "Failed to launch Realme/Oppo workaround settings: " + e.getMessage());
+                Log.w(TAG, "Failed Realme EnableAccountPreferenceActivity: " + e.getMessage());
+                return false;
+                }
             }
 
-            try {
-                Intent intent = new Intent(TelecomManager.ACTION_CHANGE_PHONE_ACCOUNTS);
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                context.startActivity(intent);
-                return true;
-            } catch (Exception e) {
-                Log.w(TAG, "Failed to launch ACTION_CHANGE_PHONE_ACCOUNTS: " + e.getMessage());
+        static boolean openCallingAccountsSettings(Context context) {
+            // 1. Try standard AOSP first
+            boolean opened = openStandardCallingAccountsSettings(context);
+            if (!opened) {
+                // 2. If standard fails or is missing, fall back to Realme/ColorOS hidden activity
+                opened = openRealmeCallingAccountsSettings(context);
+            }
+            if (!opened) {
                 try {
                     // Fallback to stock phone call settings
                     Intent fallback = new Intent(Intent.ACTION_MAIN);
@@ -203,8 +242,8 @@ public class JioTelecomManager {
                     context.startActivity(fallback);
                     return true;
                 } catch (Exception ignored) {}
-                return false;
             }
+            return opened;
         }
 
         static boolean addNewIncomingCall(Context context, String remoteNumber, String remoteName) {
