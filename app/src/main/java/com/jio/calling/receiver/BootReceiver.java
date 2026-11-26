@@ -10,7 +10,7 @@ import androidx.core.content.ContextCompat;
 import com.jio.calling.service.JioSipService;
 
 /**
- * Starts the JioSipService immediately when the Android KitKat device powers on.
+ * Starts the JioSipService when the device powers on.
  */
 public class BootReceiver extends BroadcastReceiver {
     private static final String TAG = "BootReceiver";
